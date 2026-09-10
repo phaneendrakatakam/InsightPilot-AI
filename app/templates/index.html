@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en" data-industry="technology">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="description" content="InsightPilot AI — evidence-backed enterprise data answers." />
+  <title>{{ app_name }} — {{ phase }}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/static/css/insightpilot.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="ambient-grid"></div>
+    <div class="ambient-orb ambient-orb--one"></div>
+    <div class="ambient-orb ambient-orb--two"></div>
+    <div class="ambient-orb ambient-orb--three"></div>
+    <img class="network-map" src="/static/assets/data-network.svg" alt="" />
+    <div class="noise-layer"></div>
+  </div>
+
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="/ui" aria-label="InsightPilot AI home">
+        <span class="brand-mark" aria-hidden="true">
+          <span class="brand-mark__core"></span>
+          <span class="brand-mark__ring brand-mark__ring--one"></span>
+          <span class="brand-mark__ring brand-mark__ring--two"></span>
+        </span>
+        <span class="brand-copy"><strong>InsightPilot</strong><span>AI</span></span>
+      </a>
+
+      <nav class="topbar-actions" aria-label="Workspace status">
+        <div class="workspace-chip">
+          <span class="workspace-chip__icon">⌁</span>
+          <span class="workspace-chip__copy">
+            <small>Workspace</small>
+            <strong>Enterprise Demo</strong>
+          </span>
+        </div>
+        <div class="live-chip" title="Connected to the live PostgreSQL dataset">
+          <span class="live-dot"></span><span>Live Data</span>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" id="hero">
+        <div class="hero-kicker reveal reveal--1">
+          <span class="hero-kicker__dot"></span>
+          Enterprise Data Assistant
+        </div>
+
+        <h1 class="hero-title reveal reveal--2">
+          Turn business questions into
+          <span class="gradient-text">evidence-backed answers.</span>
+        </h1>
+
+        <p class="hero-subtitle reveal reveal--3">
+          Ask in plain English. InsightPilot selects relevant schema, generates safe read-only SQL,
+          queries PostgreSQL, and explains only what the evidence supports.
+        </p>
+
+        <div class="trust-row reveal reveal--4">
+          <span><i>✓</i> Read-only SQL</span>
+          <span><i>✓</i> Grounded answers</span>
+          <span><i>✓</i> Inspectable evidence</span>
+        </div>
+
+        <div class="ask-shell reveal reveal--5" id="askShell">
+          <div class="ask-shell__glow" aria-hidden="true"></div>
+          <form id="askForm" class="ask-form">
+            <label class="sr-only" for="questionInput">Ask InsightPilot a business question</label>
+
+            <div class="ask-form__content">
+              <div class="ask-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/>
+                </svg>
+              </div>
+
+              <textarea
+                id="questionInput"
+                name="question"
+                rows="1"
+                maxlength="500"
+                autocomplete="off"
+                placeholder="Ask about revenue, customers, payments, orders, products..."
+                aria-describedby="askHint"
+              ></textarea>
+
+              <button id="askButton" class="ask-button" type="submit">
+                <span class="ask-button__label">Investigate</span>
+                <span class="ask-button__arrow" aria-hidden="true">↗</span>
+                <span class="ask-button__spinner" aria-hidden="true"></span>
+              </button>
+            </div>
+
+            <div class="ask-form__footer">
+              <span id="askHint">Enter to ask · Shift + Enter for a new line</span>
+              <span id="charCounter">0 / 500</span>
+            </div>
+          </form>
+        </div>
+
+        <div class="suggestions reveal reveal--6">
+          <div class="suggestions__header">
+            <span>Try a question</span>
+            <span class="suggestions__rule"></span>
+          </div>
+
+          <div class="suggestion-grid">
+            <button class="suggestion-card" data-question="What was total revenue last month?">
+              <span class="suggestion-card__icon">₹</span>
+              <span><small>Revenue</small><strong>What was total revenue last month?</strong></span>
+              <span class="suggestion-card__arrow">↗</span>
+            </button>
+
+            <button class="suggestion-card" data-question="Which region generated the most revenue in August 2026?">
+              <span class="suggestion-card__icon">⌖</span>
+              <span><small>Regions</small><strong>Which region generated the most revenue?</strong></span>
+              <span class="suggestion-card__arrow">↗</span>
+            </button>
+
+            <button class="suggestion-card" data-question="Show customers with failed payments in August 2026.">
+              <span class="suggestion-card__icon">!</span>
+              <span><small>Payments</small><strong>Who had failed payments in August?</strong></span>
+              <span class="suggestion-card__arrow">↗</span>
+            </button>
+
+            <button class="suggestion-card" data-question="What were the five highest-selling products?">
+              <span class="suggestion-card__icon">◇</span>
+              <span><small>Products</small><strong>What were the five highest-selling products?</strong></span>
+              <span class="suggestion-card__arrow">↗</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace" id="workspace" aria-live="polite" aria-hidden="true">
+        <div class="workspace-heading">
+          <div>
+            <span class="eyebrow">Investigation</span>
+            <h2 id="workspaceQuestion">Your question</h2>
+          </div>
+          <button class="new-question-btn" id="newQuestionButton" type="button">
+            <span>＋</span> New question
+          </button>
+        </div>
+
+        <section class="thinking-panel" id="thinkingPanel" hidden>
+          <div class="thinking-visual" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <strong id="thinkingTitle">Understanding your question</strong>
+            <p id="thinkingDetail">Preparing a grounded investigation...</p>
+          </div>
+        </section>
+
+        <div class="response-stack" id="responseStack" hidden>
+          <article class="glass-card answer-card response-animate">
+            <div class="card-label"><span class="card-label__icon">✦</span> Answer</div>
+            <p class="answer-text" id="answerText"></p>
+          </article>
+
+          <div class="response-grid">
+            <article class="glass-card response-animate response-animate--delay-1">
+              <div class="card-label"><span class="card-label__icon">◎</span> What the data shows</div>
+              <ul class="observation-list" id="observationList"></ul>
+            </article>
+
+            <article class="glass-card response-animate response-animate--delay-2">
+              <div class="card-label"><span class="card-label__icon">↳</span> Interpretation</div>
+              <p class="interpretation-text" id="interpretationText"></p>
+              <div class="caveat" id="caveatBox" hidden></div>
+            </article>
+          </div>
+
+          <article class="glass-card evidence-card response-animate response-animate--delay-3">
+            <div class="evidence-card__header">
+              <div>
+                <span class="card-label"><span class="card-label__icon">▦</span> Evidence</span>
+                <p id="evidenceMeta">0 rows</p>
+              </div>
+              <div class="schema-pills" id="schemaPills"></div>
+            </div>
+
+            <div class="table-shell">
+              <table id="evidenceTable"><thead></thead><tbody></tbody></table>
+              <div class="empty-evidence" id="emptyEvidence" hidden>
+                <span>∅</span><strong>No matching records</strong>
+                <p>The query executed successfully but returned no rows.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="glass-card sql-card response-animate response-animate--delay-4">
+            <button class="sql-toggle" id="sqlToggle" type="button" aria-expanded="false">
+              <span><small>Developer evidence</small><strong>Generated SQL</strong></span>
+              <span class="sql-toggle__chevron">⌄</span>
+            </button>
+
+            <div class="sql-body" id="sqlBody">
+              <div class="sql-body__inner">
+                <div class="sql-toolbar">
+                  <span>PostgreSQL · read-only validated</span>
+                  <button id="copySqlButton" type="button">Copy SQL</button>
+                </div>
+                <pre><code id="sqlCode"></code></pre>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <section class="state-card state-card--warning" id="clarificationState" hidden>
+          <span class="state-card__icon">↯</span>
+          <div><strong>InsightPilot needs a different request</strong><p id="clarificationMessage"></p></div>
+        </section>
+
+        <section class="state-card state-card--error" id="errorState" hidden>
+          <span class="state-card__icon">!</span>
+          <div><strong>Investigation could not be completed</strong><p id="errorMessage"></p></div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>InsightPilot AI · V1 Data Assistant</span>
+      <span>Safe SQL · PostgreSQL · Gemini</span>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/static/js/insightpilot.js" defer></script>
+</body>
+</html>
