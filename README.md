@@ -305,7 +305,7 @@ Update `.env` locally:
 
 ```env
 APP_NAME=InsightPilot AI
-APP_VERSION=0.1.0
+APP_VERSION=1.0.0
 
 DB_HOST=localhost
 DB_PORT=5432
@@ -389,7 +389,7 @@ InsightPilot-AI/
 ## Project Status
 
 **Current milestone:** V1 — Data Assistant Foundation  
-**Application version:** `0.1.0`  
+**Application version:** `1.0.0`  
 **Stable release target:** `v1.0.0`
 
 V1 is feature-complete and has passed the final automated regression gate.
