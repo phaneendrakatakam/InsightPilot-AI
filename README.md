@@ -6,7 +6,7 @@
 
 **Ask business questions in natural language. Generate safe SQL. Query PostgreSQL. Return grounded, evidence-backed answers.**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-2563eb?style=flat-square)](#project-status)
+[![Version](https://img.shields.io/badge/version-v1.0.0-2563eb?style=flat-square)](#project-status)
 [![Phase](https://img.shields.io/badge/phase-V1%20Data%20Assistant-7c3aed?style=flat-square)](#project-status)
 [![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
