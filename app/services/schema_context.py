@@ -92,7 +92,6 @@ def select_relevant_tables(question: str, max_tables: int = 4) -> list[str]:
         if len(selected) < max_tables:
             selected.append("orders")
 
-
     # Product-revenue questions should use the product/order domain, not the
     # payments domain. "Revenue" by itself normally maps to payments, but when
     # the user explicitly asks which products generated revenue, orders is the
@@ -121,9 +120,7 @@ def _relationship_subset(selected_tables: list[str]) -> list[dict]:
     ]
 
 
-def build_schema_context(question: str, max_tables: int = 4) -> dict:
-    selected_tables = select_relevant_tables(question, max_tables=max_tables)
-
+def _build_context(question: str, selected_tables: list[str]) -> dict:
     tables = {
         table_name: {
             "description": SCHEMA_CATALOG[table_name]["description"],
@@ -171,3 +168,34 @@ def build_schema_context(question: str, max_tables: int = 4) -> dict:
         "relationships": relationships,
         "prompt_context": prompt_context,
     }
+
+
+def build_schema_context(question: str, max_tables: int = 4) -> dict:
+    selected_tables = select_relevant_tables(question, max_tables=max_tables)
+    return _build_context(question, selected_tables)
+
+
+def build_schema_context_for_tables(
+    question: str,
+    table_names: list[str],
+    max_tables: int = 4,
+) -> dict:
+    """Build schema context from planner-approved table hints.
+
+    V2 uses this after the investigation planner has already selected a small
+    evidence domain for one step. It keeps the same maximum-four-table boundary
+    as V1 and still rejects anything outside the global approved catalog.
+    """
+    if max_tables < 1:
+        raise ValueError("max_tables must be at least 1.")
+
+    deduped = list(dict.fromkeys(table_names))
+
+    invalid = [table for table in deduped if table not in SCHEMA_CATALOG]
+    if invalid:
+        raise ValueError(
+            "Unapproved schema table(s): " + ", ".join(sorted(invalid))
+        )
+
+    selected_tables = deduped[:max_tables]
+    return _build_context(question, selected_tables)

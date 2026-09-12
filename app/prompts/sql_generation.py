@@ -21,6 +21,18 @@ BUSINESS DEFINITIONS
   SUM(payments.amount) for rows where payments.payment_status = 'SUCCESS'.
 - "Last month" means the previous calendar month relative to CURRENT DATE.
 
+SUBSCRIPTION DEFINITIONS
+- "Cancellation count" / "subscription cancellations" means COUNT of rows where
+  subscriptions.subscription_status = 'CANCELLED' and subscriptions.end_date falls
+  inside the requested comparison period.
+- Do not add active subscription counts to a cancellation/churn query unless the user
+  explicitly asks for active subscriptions.
+- If the user explicitly asks for active subscriptions, use
+  subscriptions.subscription_status = 'ACTIVE' and the relevant date boundaries from
+  the question. Do not infer a historical active-state snapshot from start/end dates
+  alone while ignoring subscription_status.
+- Subscription counts are supporting lifecycle evidence, not the revenue measure.
+
 PRODUCT / ORDER DEFINITIONS
 - "Highest-selling products", "best-selling products", and "top-selling products"
   mean products ranked by SUM(orders.quantity) using only
