@@ -4,15 +4,15 @@
 
 ### Enterprise Data Investigation & Analytics Agent
 
-**Ask business questions in natural language. Generate safe SQL. Query PostgreSQL. Return grounded, evidence-backed answers.**
+**Ask a business question. Let the agent investigate the data, collect evidence, and return a grounded conclusion.**
 
-[![Version](https://img.shields.io/badge/version-v1.0.0-2563eb?style=flat-square)](#project-status)
-[![Phase](https://img.shields.io/badge/phase-V1%20Data%20Assistant-7c3aed?style=flat-square)](#project-status)
+[![Version](https://img.shields.io/badge/version-v2.0.0-2563eb?style=flat-square)](#project-status)
+[![Phase](https://img.shields.io/badge/phase-V2%20Investigation%20Agent-7c3aed?style=flat-square)](#project-status)
 [![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Read--Only-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Gemini](https://img.shields.io/badge/Gemini-google--genai-8E75B2?style=flat-square&logo=googlegemini&logoColor=white)](https://ai.google.dev/)
-[![Tests](https://img.shields.io/badge/tests-53%20passed-16a34a?style=flat-square)](#testing)
+[![Tests](https://img.shields.io/badge/tests-85%20passed-16a34a?style=flat-square)](#testing)
 
 </div>
 
@@ -20,76 +20,302 @@
 
 ## Overview
 
-**InsightPilot AI** is an enterprise-style analytics assistant that converts natural-language business questions into controlled, read-only PostgreSQL queries and returns grounded explanations backed by executed data.
+**InsightPilot AI** is an enterprise-style data investigation agent that answers business questions using evidence collected from a PostgreSQL database.
 
-V1 establishes the **Data Assistant Foundation**: relevant schema selection, Gemini-powered SQL generation, SQL safety validation, read-only execution, evidence-backed answer generation, and a responsive web interface.
+Instead of allowing an LLM to directly access the database or invent an explanation, InsightPilot places the model inside a controlled investigation workflow.
 
-The project follows one core rule:
+The system can:
+
+- understand a business question,
+- create a multi-step investigation plan,
+- identify the relevant business data for each step,
+- generate PostgreSQL,
+- validate the generated SQL,
+- execute only approved read-only queries,
+- collect evidence from multiple analyses,
+- rank the strongest findings,
+- and synthesize a final evidence-backed conclusion.
+
+The core engineering principle is simple:
 
 > **The model may reason about the data, but it must never invent the data.**
 
 ---
 
-## Key Capabilities
+# V2 — Investigation Agent
 
-| Capability | V1 Implementation |
-| --- | --- |
-| Natural-language analytics | Converts business questions into SQL-backed answers |
-| Relevant schema grounding | Sends only the most relevant approved tables to the model |
-| LLM-assisted SQL generation | Gemini generates PostgreSQL for supported questions |
-| SQL safety validation | Parses and validates SQL before execution |
-| Read-only database access | Uses a restricted PostgreSQL role |
-| Bounded execution | Maximum 500 rows and a 10-second statement timeout |
-| Grounded answers | Explanations are generated from executed query results |
-| Safe failure behavior | Unsupported, destructive, or invalid requests are refused safely |
-| Responsive UI | Desktop and mobile interface with answer, evidence, and SQL states |
-| Automated regression coverage | 53 tests across the V1 pipeline, safety, grounding, API, and UI |
+V1 established the foundation for safe natural-language analytics.
 
----
+V2 extends that foundation into **multi-step business investigations**.
 
-## Architecture
+### V1
 
-```mermaid
-flowchart LR
-    A[Business Question] --> B[Relevant Schema Selector]
-    B --> C[Approved Schema Context]
-    C --> D[Gemini SQL Generation]
-    D --> E[SQL Safety Validator]
-    E -->|Approved| F[Read-only PostgreSQL]
-    E -->|Blocked| G[Safe Refusal / Error]
-    F --> H[Query Results]
-    H --> I[Grounded Answer Generation]
-    I --> J[Answer + Evidence + SQL]
+```text
+Business Question
+       ↓
+Relevant Schema
+       ↓
+Generate SQL
+       ↓
+Validate SQL
+       ↓
+PostgreSQL
+       ↓
+Grounded Answer
 ```
 
-InsightPilot does not give the LLM unrestricted database access. Generated SQL must pass the application safety layer before PostgreSQL receives it, and the database connection itself uses a restricted read-only role.
+V1 was designed for questions such as:
+
+```text
+What was our total revenue in August?
+```
+
+A single query can answer that.
 
 ---
 
-## Safety by Design
+### V2
 
-InsightPilot treats generated SQL as untrusted input.
+V2 handles broader questions where one SQL query is not enough.
+
+For example:
+
+```text
+Why did revenue decline in August compared with July?
+```
+
+Knowing that revenue declined only explains **what happened**.
+
+To investigate **why**, InsightPilot creates multiple evidence-gathering steps.
+
+```text
+Business Question
+       ↓
+Investigation Planner
+       ↓
+┌────────────────────────────────────┐
+│ Step 1 → Revenue movement          │
+│ Step 2 → Payment failures          │
+│ Step 3 → Refund movement           │
+│ Step 4 → Subscription cancellations│
+│ Step 5 → Regional revenue movement │
+└────────────────────────────────────┘
+       ↓
+Safe SQL Generation
+       ↓
+SQL Validation
+       ↓
+Read-only PostgreSQL
+       ↓
+Executed Evidence
+       ↓
+Evidence Synthesizer
+       ↓
+Conclusion
++ Ranked Findings
++ Caveats
+```
+
+The investigation plan is not a predetermined answer.
+
+Each step gathers independent evidence, and the final conclusion is created **only after the database queries have executed**.
+
+---
+
+# Product Interface
+
+![InsightPilot AI V2 Investigation Agent](docs/V2/01-home.png)
+
+The screenshot above demonstrates the complete V2 workflow.
+
+A user asks:
+
+```text
+Why did revenue decline in August compared with July?
+```
+
+InsightPilot then creates an investigation containing multiple evidence steps.
+
+The completed report contains four important sections.
+
+### Conclusion
+
+The system combines the completed investigation evidence and generates a concise overall explanation.
+
+The conclusion must remain grounded in the executed database results.
+
+### Key Findings
+
+Important signals are extracted from the investigation and ranked by significance.
+
+Examples include:
+
+- overall revenue movement,
+- regional revenue concentration,
+- payment failure changes,
+- refund movement,
+- subscription cancellation movement.
+
+### Investigation Trail
+
+The investigation trail shows how InsightPilot reached the final conclusion.
+
+Each step can contain:
+
+```text
+Investigation objective
+Relevant tables
+Generated SQL
+Executed rows
+Evidence summary
+Execution status
+```
+
+This makes the agent's reasoning process inspectable rather than hiding everything behind a single generated response.
+
+### Caveats & Next Steps
+
+InsightPilot explicitly separates **evidence from causality**.
+
+For example, an increase in failed payments occurring alongside a revenue decline does not automatically prove that every failed payment caused lost revenue.
+
+The system therefore uses cautious evidence-backed language instead of overstating what the data proves.
+
+---
+
+# How an Investigation Works
+
+When a user submits a business question, the V2 pipeline performs the following process.
+
+### 1. Investigation Planning
+
+Gemini receives the business question together with approved business domains.
+
+It generates a structured plan containing between **2 and 6 evidence-gathering steps**.
+
+The planner:
+
+- cannot execute SQL,
+- cannot invent tables,
+- cannot produce a final conclusion,
+- cannot reference unapproved business domains.
+
+---
+
+### 2. Relevant Schema Selection
+
+Each investigation step receives only the schema context required for that step.
+
+The complete database schema is not blindly sent to the model.
+
+This reduces prompt noise and limits the SQL generation context.
+
+---
+
+### 3. SQL Generation
+
+Gemini generates PostgreSQL for the current evidence objective.
+
+For example:
+
+```text
+Compare successful payment revenue in July and August.
+```
+
+The model generates SQL only for that investigation step.
+
+---
+
+### 4. SQL Safety Validation
+
+Generated SQL is treated as **untrusted input**.
+
+Before execution, InsightPilot validates it against the same safety layer introduced in V1.
+
+Only approved read-only query shapes are allowed.
+
+---
+
+### 5. Read-only Execution
+
+Validated SQL executes against PostgreSQL using a restricted database role.
+
+The LLM never receives direct database access.
+
+---
+
+### 6. Evidence Collection
+
+The executed query result becomes evidence for that investigation step.
+
+InsightPilot stores:
+
+```text
+SQL
+Referenced tables
+Returned rows
+Row count
+Evidence summary
+Step status
+```
+
+If one investigation step fails, the remaining steps can continue.
+
+The system can therefore return a **partial investigation** instead of pretending the entire investigation succeeded.
+
+---
+
+### 7. Evidence Synthesis
+
+Only successfully executed evidence is sent to the final synthesis stage.
+
+The synthesizer produces:
+
+```text
+Conclusion
+Ranked findings
+Significance levels
+Caveats
+```
+
+Failed or blocked steps are treated as missing evidence and are surfaced as caveats.
+
+They are never treated as successful evidence.
+
+---
+
+# Safety by Design
+
+InsightPilot deliberately separates **LLM reasoning** from **database authority**.
+
+Gemini can propose SQL.
+
+It cannot decide whether that SQL is safe to execute.
 
 ### Application-level controls
 
-- Accepts exactly one SQL statement.
-- Allows only read-only `SELECT` / `WITH` query shapes.
-- Blocks write, DDL, administrative, and transaction-changing operations.
-- Restricts queries to approved application tables.
-- Rejects unapproved schemas.
-- Blocks selected PostgreSQL functions that can create side effects or unsafe server access.
-- Enforces a maximum result size of **500 rows**.
-- Parses and normalizes SQL with **SQLGlot** before execution.
+The SQL safety layer:
+
+- accepts read-only `SELECT` / `WITH` queries,
+- blocks write operations,
+- blocks DDL,
+- blocks administrative operations,
+- blocks transaction-changing statements,
+- restricts queries to approved application tables,
+- rejects unapproved schemas,
+- blocks selected unsafe PostgreSQL functions,
+- limits result size to **500 rows**,
+- validates SQL before PostgreSQL receives it.
 
 ### Database-level controls
 
-The application connects with a dedicated PostgreSQL role:
+The application connects using:
 
 ```text
 insightpilot_readonly
 ```
 
-That role is configured with:
+The PostgreSQL role is configured with:
 
 ```text
 SELECT-only access
@@ -97,23 +323,96 @@ default_transaction_read_only = on
 statement_timeout = 10s
 ```
 
-This provides defense in depth: prompt instructions, application validation, and database permissions all enforce the same read-only boundary.
+This provides multiple safety boundaries:
+
+```text
+Prompt constraints
+       ↓
+Application SQL validator
+       ↓
+Approved table scope
+       ↓
+Read-only PostgreSQL credentials
+```
 
 ---
 
-## Relevant Schema Grounding
+# Grounding & Anti-Fabrication
 
-Rather than sending the full database schema to every LLM request, V1 uses an explicit approved schema catalogue containing business terms, column meanings, and table relationships.
+InsightPilot follows several grounding rules.
 
-The user's question is matched against that catalogue and only the most relevant tables are exposed to the SQL-generation prompt, with a maximum of **four tables**.
+A successful answer must originate from **executed database evidence**.
 
-This reduces prompt noise, improves SQL precision, and prevents unrelated database objects from entering the generation path.
+The system does not:
+
+- fabricate query results,
+- claim failed queries succeeded,
+- treat missing evidence as negative evidence,
+- invent business metrics,
+- silently introduce unsupported causal claims.
+
+If the investigation cannot produce completed evidence, InsightPilot returns a failed investigation instead of generating an unsupported answer.
 
 ---
 
-## Business Data Model
+# Business Semantics
 
-V1 uses seven connected business tables:
+Important measures are explicitly defined to avoid ambiguous analytics.
+
+### Revenue
+
+```text
+SUM(payments.amount)
+WHERE payment_status = 'SUCCESS'
+```
+
+unless the user explicitly asks for net or refund-adjusted revenue.
+
+### Product revenue
+
+```text
+SUM(orders.order_amount)
+```
+
+using completed orders.
+
+### Highest-selling products
+
+Ranked using:
+
+```text
+SUM(orders.quantity)
+```
+
+for completed orders.
+
+### Subscription cancellations
+
+Generic cancellation analysis uses subscriptions where:
+
+```text
+subscription_status = 'CANCELLED'
+```
+
+with the cancellation/end date inside the requested period.
+
+### Refunds
+
+Refunds are treated as a separate adverse business signal unless the user explicitly requests a net revenue calculation.
+
+### Failed payments
+
+Failed-payment amounts represent attempted payment values.
+
+They are not automatically presented as guaranteed lost revenue.
+
+These definitions help prevent the model from changing the meaning of business metrics between questions.
+
+---
+
+# Business Data Model
+
+InsightPilot uses seven connected business datasets.
 
 ```mermaid
 erDiagram
@@ -130,16 +429,20 @@ erDiagram
 | Table | Purpose |
 | --- | --- |
 | `regions` | Geographic business regions |
-| `customers` | Customer identity, signup date, region, and account status |
-| `subscriptions` | Plan, status, lifecycle dates, and monthly pricing |
-| `payments` | Payment attempts, amounts, methods, and statuses |
-| `refunds` | Refund amounts, reasons, and timestamps |
+| `customers` | Customer accounts and region mapping |
+| `subscriptions` | Subscription plan and lifecycle information |
+| `payments` | Payment attempts, amounts, methods and statuses |
+| `refunds` | Refund transactions |
 | `products` | Product catalogue and pricing |
-| `orders` | Product purchases, quantities, amounts, and statuses |
+| `orders` | Product purchases and quantities |
 
-The repository includes deterministic synthetic data so analytics behavior can be tested against known scenarios rather than random examples.
+---
 
-### Synthetic dataset
+# Synthetic Dataset
+
+The repository includes deterministic synthetic business data.
+
+This allows investigation behavior to be tested against known scenarios instead of random datasets.
 
 | Dataset | Rows |
 | --- | ---: |
@@ -151,141 +454,259 @@ The repository includes deterministic synthetic data so analytics behavior can b
 | Refunds | 177 |
 | Orders | 4,200 |
 
----
-
-## Business Semantics
-
-Important measures are explicitly defined so similar-sounding questions do not drift into inconsistent calculations.
-
-**Revenue**  
-Sum of successful `payments.amount`, unless the user explicitly asks for net or refund-adjusted revenue.
-
-**Product revenue**  
-Sum of completed `orders.order_amount`.
-
-**Highest-selling / best-selling products**  
-Ranked using completed-order `quantity`.
-
-These definitions help keep business intent aligned with the correct measure-bearing tables.
+The data intentionally contains business patterns that allow multi-step investigations to discover meaningful signals.
 
 ---
 
-## Interface
+# Example V2 Investigation
 
-### Home
-
-![InsightPilot AI home](docs/V1/screenshots/01-home.png)
-
-### Revenue analysis
-
-![Revenue analysis](docs/V1/screenshots/02-revenue-answer.png)
-
-### Product revenue
-
-![Product revenue analysis](docs/V1/screenshots/03-product-revenue.png)
-
-### Read-only refusal
-
-![Read-only safety refusal](docs/V1/screenshots/04-readonly-refusal.png)
-
-### Mobile experience
-
-<p align="center">
-  <img src="docs/V1/screenshots/05-mobile-revenue.png" alt="InsightPilot AI mobile revenue analysis" width="360" />
-</p>
-
----
-
-## Example Questions
+### Question
 
 ```text
-What was our total revenue last month?
-
-Which region generated the highest revenue in August?
-
-How many active Pro customers do we have?
-
-Which customers had failed payments in August?
-
-Which products sold the most units?
-
-Which products generated the most revenue?
+Why did revenue decline in August compared with July?
 ```
 
-A destructive request such as deleting customers is refused because the system is intentionally read-only.
+### Investigation plan
+
+InsightPilot can investigate:
+
+```text
+1. Successful payment revenue movement
+2. Payment failure movement
+3. Refund movement
+4. Subscription cancellation movement
+5. Regional revenue movement
+```
+
+Each step is independently executed and converted into database evidence.
+
+The final answer is synthesized only after those evidence steps complete.
 
 ---
 
-## API
+# Failure Handling
+
+Investigation steps use explicit states:
+
+```text
+planned
+running
+completed
+failed
+blocked
+```
+
+A failed step does not automatically stop the entire investigation.
+
+For example:
+
+```text
+5 planned steps
+
+4 completed
+1 failed
+```
+
+can produce:
+
+```text
+status: partial
+```
+
+The failed step is surfaced as a caveat.
+
+If no investigation step produces completed evidence, the investigation returns:
+
+```text
+status: failed
+```
+
+and no evidence-backed conclusion is fabricated.
+
+---
+
+# Browser Persistence
+
+V2 includes lightweight local investigation persistence.
+
+The browser stores:
+
+- the latest completed investigation,
+- up to 10 recent investigation snapshots.
+
+Refreshing the page can restore the most recent investigation without rerunning the database queries.
+
+History snapshots limit stored raw evidence rows to reduce browser storage usage.
+
+This feature is intended for the local portfolio/demo environment.
+
+---
+
+# API
+
+V1 remains available while V2 introduces the investigation API.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/` | Application metadata |
-| `GET` | `/ui` | InsightPilot web interface |
-| `GET` | `/api/v1/health` | Application and database health |
-| `POST` | `/api/v1/schema/context` | Build relevant approved schema context |
-| `POST` | `/api/v1/query/validate` | Validate SQL against V1 safety rules |
-| `POST` | `/api/v1/query/execute` | Execute validated read-only SQL |
-| `POST` | `/api/v1/ask` | End-to-end natural-language analytics pipeline |
-
-FastAPI interactive documentation is available at `/docs` while the application is running.
+| `GET` | `/` | Main InsightPilot V2 interface |
+| `GET` | `/ui` | Backward-compatible UI alias |
+| `GET` | `/docs` | FastAPI interactive API documentation |
+| `GET` | `/api/v1/health` | Application/database health |
+| `POST` | `/api/v1/schema/context` | Relevant schema selection |
+| `POST` | `/api/v1/query/validate` | Validate SQL |
+| `POST` | `/api/v1/query/execute` | Execute approved read-only SQL |
+| `POST` | `/api/v1/ask` | V1 single-question analytics pipeline |
+| `POST` | `/api/v2/investigate` | V2 multi-step investigation pipeline |
 
 ---
 
-## Tech Stack
+# Tech Stack
 
 | Layer | Technology |
 | --- | --- |
 | Backend | Python, FastAPI |
-| LLM | Google Gemini via `google-genai` |
+| LLM | Google Gemini |
+| Gemini SDK | `google-genai` |
 | Database | PostgreSQL |
 | Database access | SQLAlchemy, Psycopg |
-| SQL parsing and safety | SQLGlot |
+| SQL parsing / validation | SQLGlot |
+| Data contracts | Pydantic |
 | Configuration | Pydantic Settings |
-| Frontend | HTML, CSS, JavaScript, Jinja2 |
+| Frontend | HTML, CSS, JavaScript |
+| Templates | Jinja2 |
 | Testing | pytest, httpx |
-
-Pinned Python dependencies are available in [`requirements.txt`](requirements.txt).
 
 ---
 
-## Local Setup
+# Repository Structure
 
-### Prerequisites
+```text
+InsightPilot-AI/
+├── app/
+│   ├── api/
+│   │   └── routes/
+│   │       ├── ask.py
+│   │       ├── health.py
+│   │       ├── investigate.py
+│   │       ├── query.py
+│   │       └── schema.py
+│   │
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── schema_catalog.py
+│   │   ├── sql_guard.py
+│   │   └── version.py
+│   │
+│   ├── db/
+│   │   └── session.py
+│   │
+│   ├── prompts/
+│   │   ├── answer_generation.py
+│   │   ├── investigation_planning.py
+│   │   ├── investigation_synthesis.py
+│   │   └── sql_generation.py
+│   │
+│   ├── schemas/
+│   │   ├── assistant.py
+│   │   ├── investigation.py
+│   │   ├── query.py
+│   │   └── schema_context.py
+│   │
+│   ├── services/
+│   │   ├── assistant.py
+│   │   ├── gemini_service.py
+│   │   ├── investigation_executor.py
+│   │   ├── investigation_planner.py
+│   │   ├── investigation_service.py
+│   │   ├── investigation_synthesizer.py
+│   │   ├── query_executor.py
+│   │   └── schema_context.py
+│   │
+│   ├── static/
+│   ├── templates/
+│   ├── main.py
+│   └── ui.py
+│
+├── data/
+│   ├── sql/
+│   └── synthetic/
+│
+├── docs/
+│   ├── V1/
+│   └── V2/
+│       └── 01-home.png
+│
+├── scripts/
+│   ├── final_regression.py
+│   └── v2_release_audit.py
+│
+├── tests/
+├── .env.example
+├── .gitignore
+├── pytest.ini
+└── requirements.txt
+```
 
-You need Python 3.x, PostgreSQL, Git, and a Gemini Developer API key.
+---
 
-### 1. Clone
+# Local Setup
+
+## Prerequisites
+
+You need:
+
+```text
+Python 3.x
+PostgreSQL
+Git
+Gemini Developer API key
+```
+
+---
+
+## 1. Clone the repository
 
 ```bash
 git clone https://github.com/phaneendrakatakam/InsightPilot-AI.git
 cd InsightPilot-AI
 ```
 
-### 2. Create and activate a virtual environment
+---
 
-**Windows PowerShell**
+## 2. Create a virtual environment
+
+### Windows PowerShell
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
+---
+
+## 3. Install dependencies
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-### 4. Create the database
+---
 
-Create a PostgreSQL database named:
+## 4. Create PostgreSQL database
+
+Create:
 
 ```text
 insightpilot_db
 ```
 
-Apply the SQL files under [`data/sql`](data/sql/) in this order:
+Apply the SQL files under:
+
+```text
+data/sql/
+```
+
+in this order:
 
 ```text
 schema.sql
@@ -293,19 +714,27 @@ load_seed_data.sql
 readonly_role.sql
 ```
 
-After `readonly_role.sql`, set a local password for the `insightpilot_readonly` role.
+Set a local password for:
 
-### 5. Configure environment variables
+```text
+insightpilot_readonly
+```
+
+---
+
+## 5. Configure environment variables
+
+Copy the example file:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Update `.env` locally:
+Configure `.env` locally:
 
 ```env
 APP_NAME=InsightPilot AI
-APP_VERSION=1.0.0
+APP_VERSION=2.0.0
 
 DB_HOST=localhost
 DB_PORT=5432
@@ -317,9 +746,11 @@ GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-3.7-flash
 ```
 
-The real `.env` file is intentionally ignored by Git.
+The real `.env` file is intentionally excluded from Git.
 
-### 6. Run
+---
+
+## 6. Run InsightPilot
 
 ```powershell
 python -m uvicorn app.main:app --reload
@@ -328,93 +759,160 @@ python -m uvicorn app.main:app --reload
 Open:
 
 ```text
-http://127.0.0.1:8000/ui
+http://127.0.0.1:8000/
+```
+
+FastAPI documentation:
+
+```text
+http://127.0.0.1:8000/docs
 ```
 
 ---
 
-## Testing
+# Testing
 
-Run the automated suite:
+Run the full automated regression suite:
 
 ```powershell
 python -m pytest -q
 ```
 
-V1 final regression:
+V2 release regression:
 
 ```text
-53 passed
+85 passed
 ```
 
-Coverage includes SQL validation, schema selection, API behavior, Gemini response contracts, answer grounding, business definitions, read-only refusal behavior, and UI contracts.
+The suite covers areas including:
 
-A higher-level regression helper is also included:
-
-```text
-scripts/final_regression.py
-```
+- SQL safety validation,
+- schema grounding,
+- business metric semantics,
+- Gemini response contracts,
+- investigation planning,
+- investigation execution,
+- parent-context preservation,
+- evidence synthesis,
+- subscription investigation semantics,
+- API behavior,
+- browser persistence,
+- V1 compatibility,
+- V2 UI contracts.
 
 ---
 
-## Repository Structure
+# Release Audit
+
+V2 also contains a release audit utility:
 
 ```text
-InsightPilot-AI/
-├── app/
-│   ├── api/routes/        # FastAPI endpoints
-│   ├── core/              # Configuration, schema catalogue, SQL guard
-│   ├── db/                # Database session and engine
-│   ├── prompts/           # SQL and answer-generation prompts
-│   ├── schemas/           # Request/response models
-│   ├── services/          # Assistant, Gemini, query and schema services
-│   ├── static/            # CSS, JavaScript and visual assets
-│   ├── templates/         # Web interface
-│   ├── main.py
-│   └── ui.py
-├── data/
-│   ├── sql/               # Schema, seed loading, role and validation SQL
-│   └── synthetic/         # Deterministic synthetic business dataset
-├── docs/V1/screenshots/   # V1 product screenshots
-├── scripts/               # Regression tooling
-├── tests/                 # Automated test suite
-├── .env.example
-├── .gitignore
-├── pytest.ini
-└── requirements.txt
+scripts/v2_release_audit.py
 ```
+
+It performs release checks including:
+
+- branch/worktree inspection,
+- tracked secret checks,
+- obvious hardcoded secret detection,
+- Python compilation,
+- application route checks,
+- UI checks,
+- automated test execution.
 
 ---
 
-## Project Status
+# Project Evolution
 
-**Current milestone:** V1 — Data Assistant Foundation  
-**Application version:** `1.0.0`  
-**Stable release target:** `v1.0.0`
-
-V1 is feature-complete and has passed the final automated regression gate.
+InsightPilot is being developed in three stages.
 
 ```text
-V1 — Data Assistant Foundation      ✅ Complete
-V2 — Investigation Agent            ⏳ Next
-V3 — Enterprise Data Copilot        ⏳ Planned
+V1 — Data Assistant Foundation       ✅ Complete
+V2 — Investigation Agent             ✅ Complete
+V3 — Enterprise Data Copilot         ⏳ Planned
 ```
 
-V2 will move beyond single-question analytics into multi-step investigations that combine multiple pieces of evidence—for example, explaining a month-over-month revenue decline by examining revenue movement, payment failures, refunds, cancellations, and regional performance together.
+### V1 — Data Assistant Foundation
+
+Established:
+
+```text
+Natural-language question
+Relevant schema selection
+Gemini SQL generation
+SQL safety validation
+Read-only PostgreSQL execution
+Grounded answer generation
+```
+
+### V2 — Investigation Agent
+
+Added:
+
+```text
+Multi-step investigation planning
+Independent evidence collection
+Context-preserving SQL generation
+Partial investigation support
+Evidence synthesis
+Ranked findings
+Causality-aware caveats
+Investigation history
+V2 investigation interface
+```
+
+### V3 — Enterprise Data Copilot
+
+The next phase will build on the investigation architecture and move toward a broader enterprise copilot experience.
 
 ---
 
-## Engineering Principles
+# Engineering Principles
 
-1. **Ground answers in executed data.**
-2. **Treat generated SQL as untrusted input.**
-3. **Expose only the schema context required for the question.**
-4. **Prefer explicit business semantics over ambiguous model assumptions.**
-5. **Fail safely rather than fabricate an answer.**
+InsightPilot is built around a few deliberate engineering rules.
+
+### 1. Ground answers in executed evidence
+
+The model can interpret data but cannot replace it.
+
+### 2. Treat generated SQL as untrusted input
+
+SQL must pass deterministic validation before execution.
+
+### 3. Give the model only the context it needs
+
+Relevant schema grounding is preferred over exposing the entire database schema.
+
+### 4. Keep business definitions explicit
+
+Metrics such as revenue, product revenue and cancellations should have stable meanings.
+
+### 5. Separate correlation from causation
+
+Multiple adverse signals can be associated with a business outcome without proving direct causality.
+
+### 6. Fail safely
+
+Missing evidence is better than fabricated evidence.
+
+### 7. Keep investigations inspectable
+
+Users should be able to see the evidence trail behind the final conclusion.
 
 ---
 
-## Author
+# Project Status
+
+**Current milestone:** V2 — Investigation Agent  
+**Application version:** `2.0.0`  
+**Regression suite:** `85 passed`  
+**V1:** preserved  
+**V2:** feature complete  
+**V3:** planned
+
+---
+
+# Author
 
 **Phaneendra Katakam**
 
@@ -426,6 +924,8 @@ GitHub: [@phaneendrakatakam](https://github.com/phaneendrakatakam)
 
 <div align="center">
 
-**InsightPilot AI — turning business questions into safe, grounded data evidence.**
+### InsightPilot AI
+
+**From business questions to safe SQL, executed evidence, and explainable investigations.**
 
 </div>
