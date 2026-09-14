@@ -1,19 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
 
 import sqlglot
 from sqlglot import exp
 from sqlglot.errors import ParseError
 
+from app.core.governance import (
+    MAX_CTES,
+    MAX_JOINS,
+    MAX_SET_OPERATIONS,
+    MAX_SUBQUERIES,
+)
 from app.core.schema_catalog import SCHEMA_CATALOG
 
 
 MAX_RESULT_ROWS = 500
 
-# Even though the application DB role is read-only, the validator also blocks
-# write/DDL/administrative SQL before PostgreSQL ever sees it.
 _BLOCKED_NODE_NAMES = (
     "Insert",
     "Update",
@@ -42,8 +45,6 @@ BLOCKED_NODE_TYPES = tuple(
     if (node_type := getattr(exp, name, None)) is not None
 )
 
-# PostgreSQL functions that are unnecessary for V1 analytics and can create
-# side effects, access the server filesystem, create long-running work, etc.
 BLOCKED_FUNCTION_NAMES = {
     "pg_sleep",
     "pg_read_file",
@@ -122,11 +123,9 @@ def _validate_tables(tree: exp.Expression) -> list[str]:
         table_name = (table.name or "").lower()
         schema_name = (table.db or "").lower()
 
-        # CTE references are not physical database tables.
         if table_name in ctes:
             continue
 
-        # V1 queries may access only the approved application schema.
         if schema_name and schema_name != "public":
             raise SqlValidationError(
                 f"Schema '{schema_name}' is not approved for InsightPilot."
@@ -145,15 +144,49 @@ def _validate_tables(tree: exp.Expression) -> list[str]:
     return sorted(used)
 
 
+def _validate_complexity(tree: exp.Expression) -> None:
+    joins = sum(1 for _ in tree.find_all(exp.Join))
+    ctes = sum(1 for _ in tree.find_all(exp.CTE))
+    subqueries = sum(1 for _ in tree.find_all(exp.Subquery))
+    set_operation_types = tuple(
+        node_type
+        for name in ("Union", "Intersect", "Except")
+        if (node_type := getattr(exp, name, None)) is not None
+    )
+    set_operations = sum(
+        1
+        for node in tree.walk()
+        if set_operation_types and isinstance(node, set_operation_types)
+    )
+
+    if joins > MAX_JOINS:
+        raise SqlValidationError(
+            f"Query complexity limit exceeded: at most {MAX_JOINS} JOINs are allowed."
+        )
+
+    if ctes > MAX_CTES:
+        raise SqlValidationError(
+            f"Query complexity limit exceeded: at most {MAX_CTES} CTEs are allowed."
+        )
+
+    if subqueries > MAX_SUBQUERIES:
+        raise SqlValidationError(
+            f"Query complexity limit exceeded: at most {MAX_SUBQUERIES} subqueries are allowed."
+        )
+
+    if set_operations > MAX_SET_OPERATIONS:
+        raise SqlValidationError(
+            "Query complexity limit exceeded: at most "
+            f"{MAX_SET_OPERATIONS} UNION/INTERSECT/EXCEPT operations are allowed."
+        )
+
+
 def _apply_row_limit(tree: exp.Expression, max_rows: int) -> exp.Expression:
     limit = tree.args.get("limit")
-
     if limit is None:
         return tree.limit(max_rows, copy=False)
 
     expression = getattr(limit, "expression", None)
-
-    # PostgreSQL LIMIT must be bounded with a literal number in InsightPilot.
     if not isinstance(expression, exp.Literal) or not expression.is_int:
         raise SqlValidationError(
             f"LIMIT must be a numeric value between 1 and {max_rows}."
@@ -192,6 +225,7 @@ def validate_sql(sql: str, max_rows: int = MAX_RESULT_ROWS) -> ValidatedSql:
 
     _validate_statement_type(tree)
     _validate_functions(tree)
+    _validate_complexity(tree)
     tables = _validate_tables(tree)
 
     normalized_sql = tree.sql(dialect="postgres", pretty=False)

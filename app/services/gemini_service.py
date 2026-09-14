@@ -8,9 +8,11 @@ from pydantic import ValidationError
 from app.core.config import settings
 from app.core.schema_catalog import SCHEMA_CATALOG
 from app.prompts.answer_generation import build_answer_generation_prompt
+from app.prompts.evidence_reasoning import build_evidence_reasoning_prompt
 from app.prompts.investigation_planning import build_investigation_planning_prompt
 from app.prompts.investigation_synthesis import build_investigation_synthesis_prompt
 from app.prompts.sql_generation import build_sql_generation_prompt
+from app.schemas.analytics import EvidenceReasoning
 from app.schemas.assistant import EvidenceAnswer, SqlGeneration
 from app.schemas.investigation import InvestigationPlan, InvestigationSynthesis
 
@@ -110,21 +112,12 @@ INVESTIGATION_PLAN_SCHEMA = {
                         "description": "Approved tables likely relevant to this step.",
                     },
                 },
-                "required": [
-                    "step_id",
-                    "title",
-                    "objective",
-                    "tables",
-                ],
+                "required": ["step_id", "title", "objective", "tables"],
                 "additionalProperties": False,
             },
         },
     },
-    "required": [
-        "question",
-        "investigation_goal",
-        "steps",
-    ],
+    "required": ["question", "investigation_goal", "steps"],
     "additionalProperties": False,
 }
 
@@ -165,19 +158,54 @@ INVESTIGATION_SYNTHESIS_SCHEMA = {
 }
 
 
+EVIDENCE_REASONING_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "answer": {
+            "type": "string",
+            "description": "Grounded explanation or challenge response.",
+        },
+        "supporting_evidence_ids": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Evidence IDs directly supporting the answer.",
+        },
+        "limitations": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Important limitations or missing proof.",
+        },
+        "causality_statement": {
+            "type": "string",
+            "description": "Explicit statement of what is or is not causally established.",
+        },
+        "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Qualitative confidence based on evidence directness and completeness.",
+        },
+    },
+    "required": [
+        "answer",
+        "supporting_evidence_ids",
+        "limitations",
+        "causality_statement",
+        "confidence",
+    ],
+    "additionalProperties": False,
+}
+
+
 @lru_cache(maxsize=1)
 def _client() -> genai.Client:
-    """Return one persistent Gemini client for the application process."""
     if not settings.gemini_api_key.strip():
         raise GeminiServiceError(
             "GEMINI_API_KEY is not configured in the local .env file."
         )
-
     return genai.Client(api_key=settings.gemini_api_key)
 
 
 def close_gemini_client() -> None:
-    """Close and clear the cached Gemini client, if one was created."""
     if _client.cache_info().currsize:
         try:
             client = _client()
@@ -193,17 +221,8 @@ def _provider_error(prefix: str, exc: Exception) -> GeminiServiceError:
     )
 
 
-def generate_sql(
-    question: str,
-    schema_prompt_context: str,
-) -> SqlGeneration:
-    prompt = build_sql_generation_prompt(
-        question=question,
-        schema_prompt_context=schema_prompt_context,
-    )
-
+def _structured_interaction(prompt: str, schema: dict, prefix: str) -> str:
     client = _client()
-
     try:
         interaction = client.interactions.create(
             model=settings.gemini_model,
@@ -211,17 +230,29 @@ def generate_sql(
             response_format={
                 "type": "text",
                 "mime_type": "application/json",
-                "schema": SQL_GENERATION_SCHEMA,
+                "schema": schema,
             },
             generation_config={"thinking_level": "low"},
         )
     except Exception as exc:
-        raise _provider_error("Gemini SQL-generation request failed", exc) from exc
+        raise _provider_error(prefix, exc) from exc
 
     raw = (interaction.output_text or "").strip()
     if not raw:
-        raise GeminiServiceError("Gemini SQL-generation response was empty.")
+        raise GeminiServiceError(f"{prefix} response was empty.")
+    return raw
 
+
+def generate_sql(question: str, schema_prompt_context: str) -> SqlGeneration:
+    prompt = build_sql_generation_prompt(
+        question=question,
+        schema_prompt_context=schema_prompt_context,
+    )
+    raw = _structured_interaction(
+        prompt,
+        SQL_GENERATION_SCHEMA,
+        "Gemini SQL-generation request failed",
+    )
     try:
         return SqlGeneration.model_validate_json(raw)
     except ValidationError as exc:
@@ -253,27 +284,11 @@ def generate_business_answer(
         rows=rows,
         row_count=row_count,
     )
-
-    client = _client()
-
-    try:
-        interaction = client.interactions.create(
-            model=settings.gemini_model,
-            input=prompt,
-            response_format={
-                "type": "text",
-                "mime_type": "application/json",
-                "schema": EVIDENCE_ANSWER_SCHEMA,
-            },
-            generation_config={"thinking_level": "low"},
-        )
-    except Exception as exc:
-        raise _provider_error("Gemini evidence-answer request failed", exc) from exc
-
-    raw = (interaction.output_text or "").strip()
-    if not raw:
-        raise GeminiServiceError("Gemini evidence-answer response was empty.")
-
+    raw = _structured_interaction(
+        prompt,
+        EVIDENCE_ANSWER_SCHEMA,
+        "Gemini evidence-answer request failed",
+    )
     try:
         return EvidenceAnswer.model_validate_json(raw)
     except ValidationError as exc:
@@ -285,32 +300,11 @@ def generate_business_answer(
 
 def generate_investigation_plan(question: str) -> InvestigationPlan:
     prompt = build_investigation_planning_prompt(question)
-
-    client = _client()
-
-    try:
-        interaction = client.interactions.create(
-            model=settings.gemini_model,
-            input=prompt,
-            response_format={
-                "type": "text",
-                "mime_type": "application/json",
-                "schema": INVESTIGATION_PLAN_SCHEMA,
-            },
-            generation_config={"thinking_level": "low"},
-        )
-    except Exception as exc:
-        raise _provider_error(
-            "Gemini investigation-planning request failed",
-            exc,
-        ) from exc
-
-    raw = (interaction.output_text or "").strip()
-    if not raw:
-        raise GeminiServiceError(
-            "Gemini investigation-planning response was empty."
-        )
-
+    raw = _structured_interaction(
+        prompt,
+        INVESTIGATION_PLAN_SCHEMA,
+        "Gemini investigation-planning request failed",
+    )
     try:
         plan = InvestigationPlan.model_validate_json(raw)
     except ValidationError as exc:
@@ -318,10 +312,8 @@ def generate_investigation_plan(question: str) -> InvestigationPlan:
             "Gemini returned an investigation plan that could not be parsed: "
             f"{exc}"
         ) from exc
-
     plan.question = question
     return plan
-
 
 
 def generate_investigation_synthesis(
@@ -337,36 +329,50 @@ def generate_investigation_synthesis(
         question=question,
         evidence_payload=evidence_payload,
     )
-
-    client = _client()
-
-    try:
-        interaction = client.interactions.create(
-            model=settings.gemini_model,
-            input=prompt,
-            response_format={
-                "type": "text",
-                "mime_type": "application/json",
-                "schema": INVESTIGATION_SYNTHESIS_SCHEMA,
-            },
-            generation_config={"thinking_level": "low"},
-        )
-    except Exception as exc:
-        raise _provider_error(
-            "Gemini investigation-synthesis request failed",
-            exc,
-        ) from exc
-
-    raw = (interaction.output_text or "").strip()
-    if not raw:
-        raise GeminiServiceError(
-            "Gemini investigation-synthesis response was empty."
-        )
-
+    raw = _structured_interaction(
+        prompt,
+        INVESTIGATION_SYNTHESIS_SCHEMA,
+        "Gemini investigation-synthesis request failed",
+    )
     try:
         return InvestigationSynthesis.model_validate_json(raw)
     except ValidationError as exc:
         raise GeminiServiceError(
             "Gemini returned an investigation synthesis that could not be parsed: "
+            f"{exc}"
+        ) from exc
+
+
+def generate_evidence_reasoning(
+    user_question: str,
+    mode: str,
+    source_question: str,
+    conclusion: str | None,
+    caveats: list[str],
+    evidence_payload: list[dict],
+) -> EvidenceReasoning:
+    if not evidence_payload:
+        raise GeminiServiceError(
+            "Evidence reasoning requires at least one grounded evidence item."
+        )
+
+    prompt = build_evidence_reasoning_prompt(
+        user_question=user_question,
+        mode=mode,
+        source_question=source_question,
+        conclusion=conclusion,
+        caveats=caveats,
+        evidence_payload=evidence_payload,
+    )
+    raw = _structured_interaction(
+        prompt,
+        EVIDENCE_REASONING_SCHEMA,
+        "Gemini evidence-reasoning request failed",
+    )
+    try:
+        return EvidenceReasoning.model_validate_json(raw)
+    except ValidationError as exc:
+        raise GeminiServiceError(
+            "Gemini returned evidence reasoning that could not be parsed: "
             f"{exc}"
         ) from exc

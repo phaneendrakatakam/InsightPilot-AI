@@ -23,7 +23,6 @@ def _ensure_generated_tables_are_in_context(
     selected_tables: list[str],
 ) -> None:
     unexpected = sorted(set(generated_tables) - set(selected_tables))
-
     if unexpected:
         raise GeneratedSqlScopeError(
             "Generated SQL referenced table(s) outside the approved question context: "
@@ -61,17 +60,13 @@ def answer_question(question: str) -> dict:
             "Gemini marked the request READY but did not provide SQL."
         )
 
-    # First safety validation before execution.
     validated = validate_sql(generation.sql)
 
-    # Stronger than the global allow-list: Gemini may only use tables that were
-    # selected for this specific question.
     _ensure_generated_tables_are_in_context(
         generated_tables=validated.tables,
         selected_tables=schema_context["selected_tables"],
     )
 
-    # execute_read_query performs validation again before using the read-only DB.
     result = execute_read_query(validated.executable_sql)
 
     explanation = generate_business_answer(
@@ -92,6 +87,7 @@ def answer_question(question: str) -> dict:
         "observations": explanation.observations,
         "interpretation": explanation.interpretation,
         "caveat": explanation.caveat,
+        "governance": result.get("governance") or {"status": "passed"},
         "evidence": {
             "columns": result["columns"],
             "rows": result["rows"],

@@ -5,11 +5,12 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_ui_route_returns_insightpilot_v2_page():
+def test_ui_route_returns_insightpilot_v3_page():
     response = client.get("/ui")
 
     assert response.status_code == 200
-    assert "InsightPilot" in response.text
-    assert "V2 · Investigation Agent" in response.text
-    assert "Multi-step enterprise investigation" in response.text
-    assert "Investigation trail" in response.text
+    assert "InsightPilot AI" in response.text
+    assert "Ask anything about your data." in response.text
+    assert "Investigation Details" in response.text
+    assert "Helpful Prompts" in response.text
+    assert "/static/js/insightpilot-v3.js" in response.text

@@ -30,7 +30,7 @@ def _render_ui(request: Request):
 
 
 def register_ui(app: FastAPI) -> None:
-    """Register the InsightPilot V2 UI at the site root and /ui alias."""
+    """Register the InsightPilot V3 conversational analytics UI."""
 
     if not any(getattr(route, "path", None) == "/static" for route in app.routes):
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

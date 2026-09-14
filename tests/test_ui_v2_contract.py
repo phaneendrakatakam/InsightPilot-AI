@@ -7,32 +7,37 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_ui_is_v2_investigation_workspace():
-    response = client.get("/ui")
+def test_ui_is_v3_conversational_analytics_workspace():
+    response = client.get("/")
 
     assert response.status_code == 200
     html = response.text
 
-    assert "V2 · Investigation Agent" in html
-    assert "Investigation trail" in html
-    assert "Recent investigations" in html
-    assert "/static/js/insightpilot-v2.js" in html
+    assert "InsightPilot AI" in html
+    assert "Ask anything about your data." in html
+    assert "Key findings" in html
+    assert "Evidence" in html
+    assert "/static/js/insightpilot-v3.js" in html
 
 
-def test_v2_frontend_calls_v2_endpoint_and_persists_history():
-    script = Path("app/static/js/insightpilot-v2.js").read_text(encoding="utf-8")
+def test_v3_frontend_calls_session_turns_endpoint():
+    script = Path("app/static/js/insightpilot-v3.js").read_text(
+        encoding="utf-8"
+    )
 
-    assert 'const API_ENDPOINT = "/api/v2/investigate"' in script
-    assert "window.localStorage" in script
-    assert "insightpilot:v2:latest" in script
-    assert "insightpilot:v2:history" in script
-    assert "MAX_HISTORY = 10" in script
+    assert 'api("/api/v3/sessions"' in script
+    assert "/turns" in script
+    assert "ensureSession()" in script
+    assert "sendTurn(" in script
 
 
-def test_v2_frontend_has_refresh_restore_and_history_reopen():
-    script = Path("app/static/js/insightpilot-v2.js").read_text(encoding="utf-8")
+def test_v3_frontend_renders_kpis_charts_context_and_evidence():
+    script = Path("app/static/js/insightpilot-v3.js").read_text(
+        encoding="utf-8"
+    )
 
-    assert "restoreLatest()" in script
-    assert "renderReport(payload, { restored: true })" in script
-    assert "clearHistoryButton" in script
-    assert "newInvestigationButton" in script
+    assert "renderKpis(" in script
+    assert "renderChart(" in script
+    assert "renderContext(" in script
+    assert "renderEvidence(" in script
+    assert "renderSuggestedFollowups(" in script

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.core.sql_guard import SqlValidationError, validate_sql
+from app.schemas.analytics import GovernanceReport
 from app.schemas.investigation import InvestigationPlan, InvestigationStep
 from app.services.gemini_service import (
     GeminiServiceError,
@@ -38,7 +39,6 @@ def _build_step_question(
     investigation_question: str | None,
     step: InvestigationStep,
 ) -> str:
-    """Preserve the parent investigation context for each SQL-generation call."""
     if not investigation_question:
         return step.objective
 
@@ -68,7 +68,6 @@ def _context_for_step(
             question=generation_question,
             table_names=step.tables,
         )
-
     return build_schema_context(generation_question)
 
 
@@ -76,12 +75,13 @@ def execute_investigation_step(
     step: InvestigationStep,
     investigation_question: str | None = None,
 ) -> InvestigationStep:
-    """Execute one investigation step while preserving V1 safety boundaries."""
     step.status = "running"
     step.sql = None
     step.row_count = None
     step.rows = []
     step.evidence_summary = None
+    step.execution_time_ms = None
+    step.governance = None
     step.error = None
 
     try:
@@ -148,6 +148,8 @@ def execute_investigation_step(
         step.row_count = result["row_count"]
         step.rows = result["rows"]
         step.evidence_summary = explanation.answer
+        step.execution_time_ms = result["execution_time_ms"]
+        step.governance = GovernanceReport.model_validate(result.get("governance") or {})
         step.error = None
         return step
 
@@ -163,16 +165,9 @@ def execute_investigation_step(
 
 
 def execute_investigation_plan(plan: InvestigationPlan) -> InvestigationPlan:
-    """Execute every planned step independently.
-
-    A failed/blocked step does not stop the remaining investigation. This is
-    intentional: V2 must be able to return partial evidence instead of
-    pretending the entire investigation succeeded.
-    """
     for step in plan.steps:
         execute_investigation_step(
             step,
             investigation_question=plan.question,
         )
-
     return plan

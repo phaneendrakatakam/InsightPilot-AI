@@ -6,7 +6,7 @@ from sqlalchemy import URL
 
 class Settings(BaseSettings):
     app_name: str = "InsightPilot AI"
-    app_version: str = "2.0.0"
+    app_version: str = "3.0.0-dev"
 
     db_host: str = "localhost"
     db_port: int = 5432

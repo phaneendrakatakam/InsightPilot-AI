@@ -3,415 +3,349 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#f5f8fc" />
+  <meta name="theme-color" content="#f7f9fc" />
   <meta
     name="description"
-    content="InsightPilot AI V2 — enterprise investigation workspace for evidence-backed business analysis."
+    content="InsightPilot AI V3 — conversational enterprise analytics with grounded KPIs, charts, evidence, and SQL."
   />
   <title>{{ app_name }} — {{ phase }}</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   >
-  <link rel="stylesheet" href="/static/css/insightpilot-v2.css" />
+  <link rel="stylesheet" href="/static/css/insightpilot-v3.css" />
 </head>
 
 <body>
   <div class="app-shell">
-    <aside class="sidebar">
-      <a class="brand" href="/ui" aria-label="InsightPilot AI home">
-        <span class="brand__mark" aria-hidden="true">
-          <span class="brand__pulse"></span>
-          <span class="brand__wave">⌁</span>
-        </span>
-        <span class="brand__copy">
-          <strong>InsightPilot</strong><span>AI</span>
-        </span>
-      </a>
-
-      <button class="sidebar-primary" type="button" onclick="document.getElementById('questionInput')?.focus()">
-        <span>⌕</span>
-        Investigate
-      </button>
-
-      <nav class="sidebar-nav" aria-label="Primary">
-        <a href="/ui" class="sidebar-link is-active">
-          <span>⌂</span><strong>Home</strong>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__top">
+        <a class="brand" href="/ui" aria-label="InsightPilot AI home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2Z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+          </span>
+          <span class="brand-copy">
+            <strong>InsightPilot AI</strong>
+            <small>From questions to real insights</small>
+          </span>
+          <span class="version-badge">V3</span>
         </a>
 
-        <button class="sidebar-link" id="sidebarHistoryButton" type="button">
-          <span>◷</span><strong>Investigations</strong>
+        <button class="new-button" id="newInvestigationButton" type="button">
+          <span aria-hidden="true">＋</span>
+          New Investigation
         </button>
 
-        <button class="sidebar-link" id="savedReportsButton" type="button">
-          <span>□</span><strong>Saved reports</strong>
-        </button>
+        <nav class="primary-nav" aria-label="Primary navigation">
+          <button class="nav-item is-active" type="button" data-nav="home">
+            <span class="nav-icon">⌂</span><span>Home</span>
+          </button>
+          <button class="nav-item" type="button" id="investigationsNav">
+            <span class="nav-icon">◉</span><span>Investigations</span>
+          </button>
+          <button class="nav-item" type="button" id="evidenceNav">
+            <span class="nav-icon">▣</span><span>Evidence</span>
+          </button>
+        </nav>
 
-        <button class="sidebar-link" id="datasetsButton" type="button">
-          <span>▱</span><strong>Datasets</strong>
-        </button>
-
-        <button class="sidebar-link" id="settingsButton" type="button">
-          <span>⚙</span><strong>Settings</strong>
-        </button>
-      </nav>
-
-      <div class="sidebar-spacer"></div>
-
-      <div class="connection-card">
-        <span class="connection-card__dot"></span>
-        <div>
-          <small>Connected</small>
-          <strong>PostgreSQL</strong>
-          <span>Read-only</span>
+        <div class="sidebar-section">
+          <div class="sidebar-section__head">
+            <span>Recent</span>
+            <button id="refreshSessionsButton" type="button">Refresh</button>
+          </div>
+          <div class="recent-list" id="recentList">
+            <div class="recent-empty">No investigations yet.</div>
+          </div>
         </div>
       </div>
 
-      <div class="sidebar-version">
-        <span>{{ version }}</span>
-        <span>{{ phase }}</span>
+      <div class="sidebar__bottom">
+        <div class="connection-row">
+          <span class="status-dot"></span>
+          <div>
+            <strong>PostgreSQL</strong>
+            <span>Read-only connection</span>
+          </div>
+        </div>
+
+        <div class="profile-row">
+          <span class="avatar">PK</span>
+          <div>
+            <strong>Phaneendra Katakam</strong>
+            <span>Enterprise workspace</span>
+          </div>
+        </div>
+
+        <p class="sidebar-footnote">{{ version }} · {{ phase }}</p>
       </div>
     </aside>
 
-    <div class="main-shell">
+    <div class="workspace-shell">
       <header class="topbar">
-        <div class="topbar__context">
-          <span class="topbar__eyebrow">Workspace</span>
-          <strong>Enterprise Demo</strong>
-        </div>
+        <button class="mobile-menu" id="mobileMenuButton" type="button" aria-label="Open navigation">☰</button>
 
-        <div class="topbar__actions">
-          <span class="phase-chip">V2 · Investigation Agent</span>
+        <form class="global-search" id="globalSearchForm">
+          <span aria-hidden="true">⌕</span>
+          <input
+            id="globalSearchInput"
+            type="search"
+            autocomplete="off"
+            placeholder="Ask anything about your data... (e.g., revenue trend, compare regions, analyze failures...)"
+          />
+          <kbd>Enter</kbd>
+        </form>
 
-          <button class="history-button" id="historyButton" type="button">
-            <span aria-hidden="true">◷</span>
-            History
-            <span class="history-count" id="historyCount">0</span>
-          </button>
-
-          <span class="live-chip">
-            <span class="live-chip__dot"></span>
-            Live data
-          </span>
-
-          <span class="profile-chip" title="Workspace profile">PK</span>
+        <div class="topbar-actions">
+          <span class="connected-chip"><span class="status-dot"></span>Data Connected</span>
         </div>
       </header>
 
-      <main class="content">
-        <section class="investigate-panel">
-          <div class="investigate-panel__heading">
-            <div>
-              <span class="section-kicker">Multi-step enterprise investigation</span>
-              <h1>Ask business questions. <span>Trace to evidence.</span></h1>
-              <p>
-                InsightPilot plans the investigation, runs safe read-only SQL, and shows
-                exactly what changed — with inspectable evidence.
-              </p>
-            </div>
-          </div>
-
-          <form id="investigateForm" class="query-form">
-            <label class="sr-only" for="questionInput">Ask an investigation question</label>
-
-            <div class="query-form__main">
-              <span class="query-icon" aria-hidden="true">⌕</span>
-              <textarea
-                id="questionInput"
-                rows="1"
-                maxlength="1000"
-                autocomplete="off"
-                placeholder="Why did revenue decline in August compared with July?"
-              ></textarea>
-
-              <button id="investigateButton" class="investigate-button" type="submit">
-                <span class="investigate-button__label">Investigate</span>
-                <span class="investigate-button__arrow" aria-hidden="true">→</span>
-                <span class="investigate-button__spinner" aria-hidden="true"></span>
+      <div class="workspace-grid">
+        <main class="conversation">
+          <section class="empty-state" id="emptyState">
+            <span class="empty-state__mark">
+              <svg viewBox="0 0 24 24"><path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2Z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+            </span>
+            <h1>Ask anything about your data.</h1>
+            <p>
+              InsightPilot carries context across turns, chooses the right analytics path,
+              and keeps every answer grounded in database evidence.
+            </p>
+            <div class="starter-grid">
+              <button type="button" data-prompt="Why did revenue decline in August compared with July?">
+                <span>Revenue</span>
+                <strong>Why did revenue decline?</strong>
+              </button>
+              <button type="button" data-prompt="Which region contributed most to the August revenue decline compared with July?">
+                <span>Regions</span>
+                <strong>Find the largest contributor</strong>
+              </button>
+              <button type="button" data-prompt="What changed in payment failures in August compared with July?">
+                <span>Payments</span>
+                <strong>Analyze failure movement</strong>
               </button>
             </div>
-
-            <div class="query-form__meta">
-              <span>Enter to investigate · Shift + Enter for new line</span>
-              <span id="charCounter">0 / 1000</span>
-            </div>
-          </form>
-
-          <div class="suggestions">
-            <button
-              class="suggestion"
-              type="button"
-              data-question="Why did revenue decline in August compared with July?"
-            >
-              <span class="suggestion__icon">↘</span>
-              <span>
-                <small>Revenue</small>
-                <strong>Why did revenue decline last month?</strong>
-              </span>
-              <span class="suggestion__arrow">›</span>
-            </button>
-
-            <button
-              class="suggestion"
-              type="button"
-              data-question="What changed in payment failures and refunds in August compared with July?"
-            >
-              <span class="suggestion__icon">!</span>
-              <span>
-                <small>Operations</small>
-                <strong>What changed in failures and refunds?</strong>
-              </span>
-              <span class="suggestion__arrow">›</span>
-            </button>
-
-            <button
-              class="suggestion"
-              type="button"
-              data-question="Which regions explain the biggest revenue change in August compared with July?"
-            >
-              <span class="suggestion__icon">⌖</span>
-              <span>
-                <small>Regions</small>
-                <strong>Which regions explain the biggest change?</strong>
-              </span>
-              <span class="suggestion__arrow">›</span>
-            </button>
-          </div>
-        </section>
-
-        <section class="workspace" id="workspace" aria-hidden="true">
-          <div class="workspace__header">
-            <div class="workspace__titleblock">
-              <div class="eyebrow-row">
-                <span class="section-kicker">Investigation report</span>
-                <span class="status-chip" id="reportStatus">Completed</span>
-                <span class="restored-chip" id="restoredChip" hidden>Restored from browser</span>
-              </div>
-
-              <h2 id="workspaceQuestion">Investigation question</h2>
-              <p>Analysis across revenue, payments, refunds, subscriptions, and regional performance.</p>
-            </div>
-
-            <button class="new-investigation" id="newInvestigationButton" type="button">
-              <span>＋</span>
-              New investigation
-            </button>
-          </div>
-
-          <section class="thinking" id="thinkingPanel" hidden>
-            <div class="thinking__visual" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </div>
-            <div class="thinking__copy">
-              <strong id="thinkingTitle">Planning the investigation</strong>
-              <p id="thinkingDetail">Breaking the question into evidence-gathering steps...</p>
-            </div>
-            <div class="thinking__meter"><span id="thinkingMeter"></span></div>
           </section>
 
-          <div class="report" id="report" hidden>
-            <div class="report-grid">
-              <div class="report-main">
-                <article class="report-card conclusion-card">
-                  <div class="report-card__label">
-                    <span class="report-card__icon report-card__icon--success">✓</span>
-                    <strong>Conclusion</strong>
-                  </div>
-                  <p class="conclusion" id="conclusionText"></p>
-                </article>
+          <section class="conversation-feed" id="conversationFeed" aria-live="polite"></section>
 
-                <section class="report-section">
-                  <div class="section-heading">
-                    <div>
-                      <span class="section-kicker">Signal ranking</span>
-                      <h3>Key findings</h3>
-                    </div>
-                    <span class="section-heading__hint">Ranked by evidence significance</span>
-                  </div>
-
-                  <div class="findings-grid" id="findingsGrid"></div>
-                </section>
+          <section class="analysis-panel" id="analysisPanel" hidden>
+            <div class="analysis-status">
+              <div>
+                <span class="eyebrow">Latest analysis</span>
+                <strong id="analysisTitle">Investigation complete</strong>
               </div>
-
-              <aside class="report-side">
-                <section class="trail-card">
-                  <div class="section-heading section-heading--compact">
-                    <div>
-                      <span class="section-kicker">Evidence path</span>
-                      <h3>Investigation trail</h3>
-                    </div>
-                    <span class="section-heading__hint" id="trailMeta"></span>
-                  </div>
-
-                  <div class="trail" id="investigationTrail"></div>
-                </section>
-              </aside>
+              <span class="completed-chip" id="analysisStatus">Completed</span>
             </div>
 
-            <article class="report-card caveats-panel" id="caveatsPanel" hidden>
-              <div class="report-card__label">
-                <span class="report-card__icon report-card__icon--warning">!</span>
-                <strong>Caveats & next steps</strong>
-              </div>
-              <ul id="caveatsList"></ul>
-            </article>
-          </div>
 
-          <section class="state-card state-card--error" id="errorState" hidden>
-            <span class="state-card__icon">!</span>
-            <div>
-              <strong>Investigation could not be completed</strong>
-              <p id="errorMessage"></p>
+            <section class="trust-panel" id="trustPanel" hidden>
+              <div class="trust-summary">
+                <div class="trust-item">
+                  <span class="trust-icon trust-icon--confidence">✓</span>
+                  <span>
+                    <small>Confidence</small>
+                    <strong id="trustConfidence">—</strong>
+                  </span>
+                </div>
+                <div class="trust-item">
+                  <span class="trust-icon trust-icon--causality">↔</span>
+                  <span>
+                    <small>Causality</small>
+                    <strong id="trustCausality">—</strong>
+                  </span>
+                </div>
+                <div class="trust-item">
+                  <span class="trust-icon trust-icon--governance">◆</span>
+                  <span>
+                    <small>Governance</small>
+                    <strong id="trustGovernance">—</strong>
+                  </span>
+                </div>
+                <div class="trust-item">
+                  <span class="trust-icon trust-icon--evidence">E</span>
+                  <span>
+                    <small>Grounding</small>
+                    <strong id="trustGrounding">—</strong>
+                  </span>
+                </div>
+                <button class="trust-toggle" id="trustToggle" type="button">Details</button>
+              </div>
+
+              <div class="trust-details" id="trustDetails" hidden>
+                <div class="trust-detail-block">
+                  <span class="eyebrow">Why this confidence</span>
+                  <p id="trustRationale">—</p>
+                </div>
+                <div class="trust-detail-block">
+                  <span class="eyebrow">Causality guardrail</span>
+                  <p id="trustCausalityNote">—</p>
+                </div>
+                <div class="trust-detail-block">
+                  <span class="eyebrow">Evidence provenance</span>
+                  <div class="provenance-list" id="provenanceList"></div>
+                </div>
+                <div class="trust-detail-block" id="traceBlock">
+                  <span class="eyebrow">Execution trace</span>
+                  <p id="traceSummary">—</p>
+                </div>
+              </div>
+            </section>
+
+            <div class="kpi-grid" id="kpiGrid"></div>
+
+            <section class="chart-card" id="chartSection" hidden>
+              <div class="card-heading">
+                <div>
+                  <span class="eyebrow">Grounded visualization</span>
+                  <h2 id="chartTitle">Analysis trend</h2>
+                </div>
+                <span class="evidence-tag" id="chartEvidence"></span>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="analysisChart"></canvas>
+              </div>
+            </section>
+
+            <div class="analysis-columns">
+              <section class="content-card">
+                <div class="card-heading">
+                  <div>
+                    <span class="eyebrow">Signal ranking</span>
+                    <h2>Key findings</h2>
+                  </div>
+                </div>
+                <div class="findings-list" id="findingsList"></div>
+              </section>
+
+              <section class="content-card">
+                <div class="card-heading">
+                  <div>
+                    <span class="eyebrow">Conversation state</span>
+                    <h2>Context</h2>
+                  </div>
+                </div>
+                <dl class="context-grid" id="contextGrid"></dl>
+              </section>
+            </div>
+
+            <section class="evidence-section" id="evidenceSection">
+              <div class="card-heading">
+                <div>
+                  <span class="eyebrow">Traceable output</span>
+                  <h2>Evidence</h2>
+                </div>
+                <button class="text-button" id="viewAllEvidenceButton" type="button">Expand all</button>
+              </div>
+              <div class="evidence-grid" id="evidenceGrid"></div>
+            </section>
+
+            <div class="suggested-followups" id="suggestedFollowups" hidden>
+              <span>Suggested follow-ups</span>
+              <div id="followupButtons"></div>
             </div>
           </section>
-        </section>
-      </main>
 
-      <footer class="footer">
-        <span>InsightPilot AI · Enterprise investigation workspace</span>
-        <span>{{ version }} · Read-only PostgreSQL · Gemini</span>
-      </footer>
+          <div class="composer-shell">
+            <form class="composer" id="composerForm">
+              <textarea
+                id="composerInput"
+                rows="1"
+                maxlength="2000"
+                placeholder="Ask a follow-up question..."
+                aria-label="Ask InsightPilot"
+              ></textarea>
+              <button class="send-button" id="sendButton" type="submit" aria-label="Send question">
+                <span>→</span>
+              </button>
+            </form>
+            <p>Enter to send · Shift + Enter for a new line</p>
+          </div>
+        </main>
+
+        <aside class="right-rail">
+          <section class="rail-card">
+            <div class="rail-heading">
+              <h2>Investigation Details</h2>
+              <span class="rail-dot">•••</span>
+            </div>
+            <dl class="details-list">
+              <div><dt>Title</dt><dd id="detailTitle">New investigation</dd></div>
+              <div><dt>Created</dt><dd id="detailCreated">—</dd></div>
+              <div><dt>Status</dt><dd><span class="completed-chip" id="detailStatus">Ready</span></dd></div>
+              <div><dt>Dataset</dt><dd>Enterprise Analytics</dd></div>
+              <div><dt>Turns</dt><dd id="detailTurns">0</dd></div>
+            </dl>
+          </section>
+
+          <section class="rail-card">
+            <div class="rail-heading"><h2>Quick Actions</h2></div>
+            <div class="action-list">
+              <button id="copyResponseButton" type="button"><span>⧉</span>Copy latest response</button>
+              <button id="railEvidenceButton" type="button"><span>▣</span>View evidence</button>
+              <button id="railNewButton" type="button"><span>＋</span>New investigation</button>
+            </div>
+          </section>
+
+          <section class="rail-card">
+            <div class="rail-heading">
+              <h2>Helpful Prompts</h2>
+              <span class="idea-mark">✦</span>
+            </div>
+            <div class="prompt-list">
+              <button type="button" data-prompt="Why did revenue decline in August compared with July?">Why did revenue decline?</button>
+              <button type="button" data-prompt="Investigate South.">Investigate South region</button>
+              <button type="button" data-prompt="Compare South with North.">Compare South with North</button>
+              <button type="button" data-prompt="Break South down by plan.">Break down by plan</button>
+              <button type="button" data-prompt="Are you sure payment failures caused it?">Challenge the conclusion</button>
+            </div>
+          </section>
+
+        </aside>
+      </div>
     </div>
   </div>
 
-  
-  <aside class="utility-drawer" id="utilityDrawer" aria-hidden="true">
-    <div class="utility-drawer__backdrop" id="utilityBackdrop"></div>
-    <div class="utility-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="utilityTitle">
-      <div class="utility-drawer__header">
+
+  <aside class="investigations-drawer" id="investigationsDrawer" aria-hidden="true">
+    <div class="investigations-drawer__backdrop" id="investigationsBackdrop"></div>
+    <section class="investigations-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="investigationsTitle">
+      <div class="investigations-drawer__header">
         <div>
-          <span class="section-kicker" id="utilityKicker">Workspace</span>
-          <h2 id="utilityTitle">Workspace</h2>
+          <span class="eyebrow">Conversation history</span>
+          <h2 id="investigationsTitle">Investigations</h2>
+          <p>Open any investigation from this runtime and continue the conversation.</p>
         </div>
-        <button id="closeUtilityButton" class="icon-button" type="button" aria-label="Close panel">×</button>
+        <button class="drawer-close" id="closeInvestigationsButton" type="button" aria-label="Close investigations">×</button>
       </div>
-      <div class="utility-drawer__content" id="utilityContent"></div>
-    </div>
+
+      <div class="investigations-drawer__toolbar">
+        <button class="drawer-new" id="drawerNewInvestigationButton" type="button">＋ New Investigation</button>
+        <button class="drawer-refresh" id="drawerRefreshInvestigationsButton" type="button">Refresh</button>
+      </div>
+
+      <div class="investigations-drawer__list" id="investigationsDrawerList">
+        <div class="drawer-empty">No investigations yet.</div>
+      </div>
+    </section>
   </aside>
 
-<aside class="history-drawer" id="historyDrawer" aria-hidden="true">
-    <div class="history-drawer__backdrop" id="historyBackdrop"></div>
-
-    <div class="history-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
-      <div class="history-drawer__header">
-        <div>
-          <span class="section-kicker">Browser history</span>
-          <h2 id="historyTitle">Recent investigations</h2>
-        </div>
-
-        <button id="closeHistoryButton" class="icon-button" type="button" aria-label="Close history">
-          ×
-        </button>
-      </div>
-
-      <p class="history-drawer__note">
-        Saved in this browser. Reopen a report without rerunning Gemini or PostgreSQL.
-      </p>
-
-      <div class="history-list" id="historyList"></div>
-
-      <div class="history-drawer__footer">
-        <button class="clear-history" id="clearHistoryButton" type="button">Clear history</button>
+  <div class="loading-overlay" id="loadingOverlay" hidden>
+    <div class="loading-card">
+      <span class="spinner"></span>
+      <div>
+        <strong id="loadingTitle">Investigating your question</strong>
+        <p id="loadingDetail">Planning evidence, running safe SQL, and synthesizing the result…</p>
       </div>
     </div>
-  </aside>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script>
-    (() => {
-      const utilityDrawer = document.getElementById("utilityDrawer");
-      const utilityBackdrop = document.getElementById("utilityBackdrop");
-      const closeUtilityButton = document.getElementById("closeUtilityButton");
-      const utilityTitle = document.getElementById("utilityTitle");
-      const utilityKicker = document.getElementById("utilityKicker");
-      const utilityContent = document.getElementById("utilityContent");
-
-      const openUtility = (title, kicker, content) => {
-        utilityTitle.textContent = title;
-        utilityKicker.textContent = kicker;
-        utilityContent.innerHTML = content;
-        utilityDrawer.classList.add("is-open");
-        utilityDrawer.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
-      };
-
-      const closeUtility = () => {
-        utilityDrawer.classList.remove("is-open");
-        utilityDrawer.setAttribute("aria-hidden", "true");
-        document.body.style.overflow = "";
-      };
-
-      document.getElementById("sidebarHistoryButton")?.addEventListener("click", () => {
-        document.getElementById("historyButton")?.click();
-      });
-
-      document.getElementById("savedReportsButton")?.addEventListener("click", () => {
-        document.getElementById("historyButton")?.click();
-      });
-
-      document.getElementById("datasetsButton")?.addEventListener("click", () => {
-        openUtility(
-          "Approved datasets",
-          "Read-only data catalog",
-          `
-            <p class="utility-copy">
-              InsightPilot investigates only the approved business tables below.
-              SQL generation is restricted to relevant schema context for each question.
-            </p>
-            <div class="dataset-list">
-              <div class="dataset-item"><strong>customers</strong><span>Customer identity, lifecycle state, and region assignment.</span></div>
-              <div class="dataset-item"><strong>subscriptions</strong><span>Subscription plans, status, start dates, and cancellation/end dates.</span></div>
-              <div class="dataset-item"><strong>payments</strong><span>Payment attempts, success/failure status, amounts, and payment dates.</span></div>
-              <div class="dataset-item"><strong>refunds</strong><span>Refund transactions and refund amounts.</span></div>
-              <div class="dataset-item"><strong>orders</strong><span>Product order quantities, order amounts, status, and order dates.</span></div>
-              <div class="dataset-item"><strong>products</strong><span>Product catalog used for order and product-sales analysis.</span></div>
-              <div class="dataset-item"><strong>regions</strong><span>Approved geographic regions used for regional performance analysis.</span></div>
-            </div>
-          `
-        );
-      });
-
-      document.getElementById("settingsButton")?.addEventListener("click", () => {
-        openUtility(
-          "Workspace settings",
-          "Local interface",
-          `
-            <div class="settings-list">
-              <div class="setting-row">
-                <div><strong>Appearance</strong><span>Light enterprise workspace</span></div>
-                <span class="setting-badge">Light</span>
-              </div>
-              <div class="setting-row">
-                <div><strong>Investigation history</strong><span>Saved in this browser using localStorage</span></div>
-                <span class="setting-badge">Enabled</span>
-              </div>
-              <div class="setting-row">
-                <div><strong>Database access</strong><span>PostgreSQL execution uses a read-only connection</span></div>
-                <span class="setting-badge setting-badge--success">Read-only</span>
-              </div>
-              <div class="setting-row">
-                <div><strong>Evidence mode</strong><span>SQL and raw rows remain inspectable per investigation step</span></div>
-                <span class="setting-badge">Enabled</span>
-              </div>
-            </div>
-          `
-        );
-      });
-
-      closeUtilityButton?.addEventListener("click", closeUtility);
-      utilityBackdrop?.addEventListener("click", closeUtility);
-
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && utilityDrawer?.classList.contains("is-open")) {
-          closeUtility();
-        }
-      });
-    })();
-  </script>
-  <script src="/static/js/insightpilot-v2.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="/static/js/insightpilot-v3.js"></script>
 </body>
 </html>

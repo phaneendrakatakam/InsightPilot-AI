@@ -4,6 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.analytics import GovernanceReport
+
 
 class InvestigationRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
@@ -19,6 +21,8 @@ class InvestigationStep(BaseModel):
     row_count: int | None = None
     rows: list[dict[str, Any]] = Field(default_factory=list)
     evidence_summary: str | None = None
+    execution_time_ms: float | None = None
+    governance: GovernanceReport | None = None
     error: str | None = None
 
 
