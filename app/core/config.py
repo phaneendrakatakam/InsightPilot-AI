@@ -1,4 +1,4 @@
-from functools import lru_cache
+﻿from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
@@ -6,7 +6,7 @@ from sqlalchemy import URL
 
 class Settings(BaseSettings):
     app_name: str = "InsightPilot AI"
-    app_version: str = "3.0.0-dev"
+    app_version: str = "3.0.0"
 
     db_host: str = "localhost"
     db_port: int = 5432
@@ -41,3 +41,4 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
